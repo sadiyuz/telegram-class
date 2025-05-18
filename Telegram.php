@@ -23,6 +23,9 @@ class Telegram
             curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             $response = curl_exec($ch);
+            if (curl_error($ch)) {
+                file_put_contents('log', curl_error($ch));
+            }
             curl_close($ch);
             return json_decode($response, true);
         } catch (Exception $e) {
@@ -130,6 +133,14 @@ class Telegram
         return $response;
     }
 
+    public function answerCallbackQuery($callbackQueryId, $text, $show_alert = false) {
+        $response = $this->request('answerCallbackQuery', [
+            'callback_query_id' => $callbackQueryId,
+            'text' => $text,
+            'show_alert' => $show_alert
+        ]);
+    }
+
     public function reply($text, $keyboard = null) {
         $update = $this->getWebhookUpdate();
         $chatId = $update['message']['chat']['id'] ?? $update['callback_query']['message']['chat']['id'];
@@ -171,7 +182,28 @@ class Telegram
         $chatId = $update['message']['chat']['id'] ?? $update['callback_query']['message']['chat']['id'];
         $msgId = $update['message']['message_id'] ?? $update['callback_query']['message']['message_id'];
 
-        $params = ['reply_to_message_id' => $msgId];
         return $this->editMessageText($chatId, $text, 'html', $msgId, $keyboard);
+    }
+
+    public function editReplyMessageCaption($caption, $keyboard = null) {
+        $update = $this->getWebhookUpdate();
+        $chatId = $update['message']['chat']['id'] ?? $update['callback_query']['message']['chat']['id'];
+        $msgId = $update['message']['message_id'] ?? $update['callback_query']['message']['message_id'];
+
+        return $this->editMessageCaption($chatId, $caption, 'html', $msgId, $keyboard);
+    }
+
+    public function editReplyMessageKeyboard($keyboard) {
+        $update = $this->getWebhookUpdate();
+        $chatId = $update['message']['chat']['id'] ?? $update['callback_query']['message']['chat']['id'];
+        $msgId = $update['message']['message_id'] ?? $update['callback_query']['message']['message_id'];
+
+        return $this->editMessageReplyMarkup($chatId, $msgId, $keyboard);
+    }
+
+    public function replyCallbackQuery($text, $show_alert = false) {
+        $update = $this->getWebhookUpdate();
+        $callbackQueryId = $update['callback_query']['id'];
+        return $this->answerCallbackQuery($callbackQueryId, $text, $show_alert);
     }
 }
